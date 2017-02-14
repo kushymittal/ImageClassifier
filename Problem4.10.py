@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 
 # Converts the raw row vectors to 32 X 32 image arrays
 def row_to_img(row_vector):
-	my_img = [ [None for y in range(32)] for x in range(32)]
+	my_img = numpy.array([ numpy.array([numpy.array([None for z in range(3)]) for y in range(32)]) for x in range(32)])
 	
 	for row in range(32):
 		for col in range(32):
@@ -16,13 +16,31 @@ def row_to_img(row_vector):
 			green = row_vector[row*32 + col + 1024]
 			blue = row_vector[row*32 + col + 2048]
 
-			pixel = (red, green, blue)
+			pixel = numpy.array([red, green, blue])
 			my_img[row][col] = pixel
 	
 	return my_img
 
+def row_to_img_32_cross_96(row_vector):
+	my_img = numpy.array([numpy.array([None for y in range(96)]) for x in range(32)])
+
+	for row in range(32):
+		for col in range(96):
+
+			col_in_img = col % 32
+
+			if col < 32:
+				my_img[row][col] = row_vector[row*32 + col_in_img]
+			elif col < 64:
+				my_img[row][col] = row_vector[row*32 + col_in_img + 1024]
+			else:
+				my_img[row][col] = row_vector[row*32 + col_in_img + 2048]
+	return my_img
+
+
 def write_img_to_file(img, filename):
-	scipy.misc.imsave(filename, img)
+	pass
+	#scipy.misc.imsave(filename, img)
 
 def get_class_names():
 	class_names = [line.rstrip('\n') for line in open('dataset/names.txt')]
@@ -71,9 +89,13 @@ def main():
 	class_names = get_class_names()
 
 	for img_vectors in range(len(means)):
-		img = row_to_img(means[img_vectors])
+		img = row_to_img_32_cross_96(means[img_vectors])
 
 		write_img_to_file(img, class_names[img_vectors] + ".png")
+		print img.shape
+		pca = PCA(n_components = 20)
+		pca.fit(img)
+		print(pca.explained_variance_ratio_)
+		break
 
-if __name__ == '__main__':
-	main()
+main()

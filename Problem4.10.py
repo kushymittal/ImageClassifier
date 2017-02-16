@@ -4,6 +4,7 @@ import scipy.misc
 import numpy
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.metrics import mean_squared_error
+from sklearn.manifold import MDS
 import plotly.plotly as py
 import plotly.graph_objs as go
 
@@ -142,6 +143,16 @@ def get_test_error(pca_components):
 
 	return error
 
+# Multi-dimensional scaling
+def dank_memes(distance_matrix, data):
+	mds = MDS(n_components = 2)
+
+	similarities = distance_matrix
+	result = mds.fit_transform(data)
+
+	return result
+
+
 # Returns a 10 x 10 matrix where (i, j) corresponds to the distance between mean images of class i and j
 def get_mean_distances(mean_images):
 	matrix = numpy.array([numpy.array([0 for y in range(10)]) for x in range(10)])
@@ -161,18 +172,30 @@ def main():
 	pca_components = get_principal_components(20)
 
 	# Convert Mean Components to Images
-	for i in range(10):
+	"""for i in range(10):
 		img = row_to_img(pca_components[i].mean_)
-		write_img_to_file(img, class_names[i] + ".png")
+		write_img_to_file(img, class_names[i] + ".png")"""
 
 	# plot error on test images
-	mean_errors =  get_test_error(pca_components)
+	"""mean_errors =  get_test_error(pca_components)
 	data = [go.Bar(x = class_names, y = mean_errors)]
-	py.plot(data, filename = "PCA Test Errors")
+	py.plot(data, filename = "PCA Test Errors")"""
 
 	# Compute Distances
-	#mean_dist = get_mean_distances([pca_components[i].mean_ for i in range(10)])
+	mean_dist = get_mean_distances([pca_components[i].mean_ for i in range(10)])
+	mean_imgs = numpy.array([pca_components[i].mean_ for i in range(10)])
 
-	#print mean_dist
+	means_scaled = dank_memes(mean_dist, mean_imgs)
+	x = [means_scaled[i][0] for i in range(10)]
+	y = [means_scaled[i][1] for i in range(10)]
+	trace = go.Scatter(x = x, y = y, mode = 'markers+text', text = class_names, textposition = "bottom")
+	data = [trace]
+	py.plot(data, filename = "blah")
 
-main()
+if __name__ == '__main__':
+	main()
+
+
+
+
+

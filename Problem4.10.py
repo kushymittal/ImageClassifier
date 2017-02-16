@@ -3,7 +3,9 @@ import PIL
 import scipy.misc
 import numpy
 from sklearn.decomposition import PCA, IncrementalPCA
-
+from sklearn.metrics import mean_squared_error
+import plotly.plotly as py
+import plotly.graph_objs as go
 
 # Converts the raw row vectors to 32 X 32 image arrays
 def row_to_img(row_vector):
@@ -67,7 +69,7 @@ def compute_mean_imgs():
 	print class_count
 	return mean_images
 
-def get_principal_components():
+def get_principal_components(num):
 	# Files containing training data
 	train_files = ["dataset/data_batch_1", "dataset/data_batch_2", "dataset/data_batch_3", "dataset/data_batch_4", "dataset/data_batch_5"]
 
@@ -99,29 +101,78 @@ def get_principal_components():
 
 					count = count + 1
 
-
 			f.close()
 
 		# Memory Efficient PCA
-		ipca = IncrementalPCA(n_components = 20, batch_size = 200)
+		ipca = IncrementalPCA(n_components = num, batch_size = 200)
 		x_ipca = ipca.fit(images)
 		pca_components[label] = x_ipca
 
 	return pca_components
 
-def get test_error(computed, actual):
-	pass
+def get_test_error(pca_components):
+	error = numpy.array([0 for x in range(10)])
+	count = numpy.array([0 for x in range(10)])
+
+	f = open('dataset/test_batch')
+
+	# Unpack the dataset
+	my_dict = cPickle.load(f)
+
+	# Separate data and labels
+	test_data = numpy.array(my_dict['data'])
+	test_labels = my_dict['labels']
+
+	for i in range(len(test_labels)):
+
+		# class = test_labels[i]
+		test_data_transform = pca_components[test_labels[i]].transform(numpy.array(test_data[i]))
+		count[test_labels[i]] = count[test_labels[i]] + 1
+
+		# convert vector back into original space
+		inverse = pca_components[test_labels[i]].inverse_transform(test_data_transform)
+
+		# find mean squared error
+		error[test_labels[i]] = error[test_labels[i]] + mean_squared_error(test_data[i], inverse[0])
+
+	f.close()
+
+	# Error averaged over the number of images
+	error = [error[i]/count[i] for i in range(10)]
+
+	return error
+
+# Returns a 10 x 10 matrix where (i, j) corresponds to the distance between mean images of class i and j
+def get_mean_distances(mean_images):
+	matrix = numpy.array([numpy.array([0 for y in range(10)]) for x in range(10)])
+
+	for i in range(10):
+		for j in range(10):
+			matrix[i][j] = mean_squared_error(mean_images[i], mean_images[j])
+
+	return matrix
+
 
 def main():
+	# Get the class names
 	class_names = get_class_names()
 
-	pca_components = get_principal_components()
+	# Get pca objects for each category
+	pca_components = get_principal_components(20)
 
+	# Convert Mean Components to Images
 	for i in range(10):
 		img = row_to_img(pca_components[i].mean_)
 		write_img_to_file(img, class_names[i] + ".png")
 
-	# compute error on test images using pCA images
+	# plot error on test images
+	mean_errors =  get_test_error(pca_components)
+	data = [go.Bar(x = class_names, y = mean_errors)]
+	py.plot(data, filename = "PCA Test Errors")
 
+	# Compute Distances
+	#mean_dist = get_mean_distances([pca_components[i].mean_ for i in range(10)])
+
+	#print mean_dist
 
 main()

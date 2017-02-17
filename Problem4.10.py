@@ -144,13 +144,17 @@ def get_test_error(pca_components):
 	return error
 
 # Multi-dimensional scaling
-def dank_memes(distance_matrix, data):
+def mds(distance_matrix, data, class_names):
 	mds = MDS(n_components = 2)
 
 	similarities = distance_matrix
 	result = mds.fit_transform(data)
 
-	return result
+	x = [result[i][0] for i in range(10)]
+	y = [result[i][1] for i in range(10)]
+	trace = go.Scatter(x = x, y = y, mode = 'markers+text', text = class_names, textposition = "bottom")
+	data = [trace]
+	py.plot(data, filename = "blah")
 
 
 # Returns a 10 x 10 matrix where (i, j) corresponds to the distance between mean images of class i and j
@@ -163,6 +167,51 @@ def get_mean_distances(mean_images):
 
 	return matrix
 
+def another_test_error(pca_components):
+
+	# error[i][j] represents average error representing all images of class i using 20 principal components of class j
+	error = numpy.array([numpy.array([0 for x in range(10)]) for y in range(10)])
+	count = numpy.array([0 for x in range(10)])
+
+	f = open('dataset/test_batch')
+
+	# Unpack the dataset
+	my_dict = cPickle.load(f)
+
+	# Separate data and labels
+	test_data = numpy.array(my_dict['data'])
+	test_labels = my_dict['labels']
+
+	similarities = numpy.array([numpy.array([0 for x in range(10)]) for y in range(10)])
+
+	for i in range(len(test_labels)):
+		for j in range(10):					# Project curr sample on each of the jth classes' principal components
+
+			# Project current sample on each classes' principal components
+			test_data_transform = pca_components[j].transform(numpy.array(test_data[i]))
+
+			# increment the count
+			count[test_labels[i]] = count[test_labels[i]] + 1
+
+			# convert back into original dimensions
+			inverse = pca_components[j].inverse_transform(test_data_transform)
+
+			# compute the error
+			error[test_labels[i]][j] = error[test_labels[i]][j] + mean_squared_error(test_data[i], inverse[0])
+
+	for i in range(10):
+		for j in range(10):
+			error[i][j] = error[i][j]/count[i]
+
+	for i in range(10):
+		for j in range(i):
+			similarities[i][j] = 0.5*(error[i][j] + error[j][i])
+			similarities[j][i] = 0.5*(error[i][j] + error[j][i])
+
+	return similarities
+
+	f.close()
+
 
 def main():
 	# Get the class names
@@ -170,27 +219,28 @@ def main():
 
 	# Get pca objects for each category
 	pca_components = get_principal_components(20)
-
+	"""
 	# Convert Mean Components to Images
-	"""for i in range(10):
+	for i in range(10):
 		img = row_to_img(pca_components[i].mean_)
-		write_img_to_file(img, class_names[i] + ".png")"""
+		write_img_to_file(img, class_names[i] + ".png")
 
 	# plot error on test images
-	"""mean_errors =  get_test_error(pca_components)
+	mean_errors =  get_test_error(pca_components)
+	
 	data = [go.Bar(x = class_names, y = mean_errors)]
-	py.plot(data, filename = "PCA Test Errors")"""
+	py.plot(data, filename = "PCA Test Errors")
 
 	# Compute Distances
 	mean_dist = get_mean_distances([pca_components[i].mean_ for i in range(10)])
 	mean_imgs = numpy.array([pca_components[i].mean_ for i in range(10)])
 
-	means_scaled = dank_memes(mean_dist, mean_imgs)
-	x = [means_scaled[i][0] for i in range(10)]
-	y = [means_scaled[i][1] for i in range(10)]
-	trace = go.Scatter(x = x, y = y, mode = 'markers+text', text = class_names, textposition = "bottom")
-	data = [trace]
-	py.plot(data, filename = "blah")
+	# Multi-dimensional scaling
+	mds(mean_dist, mean_imgs, class_names)
+	"""
+	distances = another_test_error(pca_components)
+	mean_imgs = numpy.array([pca_components[i].mean_ for i in range(10)])
+	mds(distances, mean_imgs, class_names)
 
 if __name__ == '__main__':
 	main()

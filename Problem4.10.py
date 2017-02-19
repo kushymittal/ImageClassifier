@@ -8,6 +8,8 @@ from sklearn.manifold import MDS
 import plotly.plotly as py
 import plotly.graph_objs as go
 
+# made by Kush and Polina
+
 # Converts the raw row vectors to 32 X 32 image arrays
 def row_to_img(row_vector):
 	my_img = numpy.array([ numpy.array([numpy.array([None for z in range(3)]) for y in range(32)]) for x in range(32)])
@@ -219,7 +221,7 @@ def main():
 
 	# Get pca objects for each category
 	pca_components = get_principal_components(20)
-	"""
+
 	# Convert Mean Components to Images
 	for i in range(10):
 		img = row_to_img(pca_components[i].mean_)
@@ -237,7 +239,7 @@ def main():
 
 	# Multi-dimensional scaling
 	mds(mean_dist, mean_imgs, class_names)
-	"""
+
 	distances = another_test_error(pca_components)
 	mean_imgs = numpy.array([pca_components[i].mean_ for i in range(10)])
 	mds(distances, mean_imgs, class_names)
